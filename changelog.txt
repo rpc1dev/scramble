@@ -1,5 +1,8 @@
 Scramble - Changelog
 
+v3.8b - DVR-K12D Support
+	Bugfixes
+
 v3.7  - DVR-107 support
 
 v3.6b - DVR-106 *FULL* integration, with extra checksuming on general

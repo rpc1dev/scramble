@@ -1,6 +1,6 @@
 /*
 * scramble : scrambler/unscrambler for Pioneer DVR firmwares
-* version 3.7
+* version 3.8
 *
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -34,9 +34,9 @@
 #define	KEY_SIZE				0x000100	// GENERAL key size
 #define	KEY_ADDRESS				0x008000	// GENERAL key position
 #define SCRAMBLED_ID_POS        0x70
-#define NB_TYPES				5			// Number of drive models currently known
+#define NB_TYPES				6			// Number of drive models currently known
 #define NB_TYPES_0              3
-#define NB_TYPES_1              2
+#define NB_TYPES_1              (NB_TYPES-NB_TYPES_0)
 
 // The new scrambler makes use of these new parameters
 typedef struct {
@@ -46,22 +46,26 @@ typedef struct {
 } Scrambler1;
 
 // Defaults parameters
-static  char scramblerType[NB_TYPES]        = {0,0,0,1,1};
-static  Scrambler1 type1[2][NB_TYPES_1]     = { {{0x00B000, 0x005000, 0x009000},	// KERNEL
+
+static  char scramblerType[NB_TYPES]        = {0,0,0,1,1,1};
+static  Scrambler1 type1[NB_TYPES_1][2]     = { {{0x00B000, 0x005000, 0x009000},	// KERNEL
+												 {0x010000, 0x0C3000, 0x0E0000}},   // GENERAL
+												{{0x00B000, 0x005000, 0x009000},	// KERNEL
 												 {0x010000, 0x0C3000, 0x0E0000}},   // GENERAL
 												{{0x00B000, 0x005000, 0x009000},	// KERNEL
 												 {0x010000, 0x0C3000, 0x0E0000}} }; // GENERAL
 static  char def_keyname[NB_TYPES_0][16]	= {"key103.bin", "key104.bin", "key105.bin"};
-static  char scrambled_ID[NB_TYPES][8]		= {"DVR-103", "DVR-104", "DVR-105", "DVR-106", "DVR-107"};
-static  u32  unscrambled_ID_pos[NB_TYPES]	= {0x003800, 0x010100, 0x010000, 0x010000, 0x010000};
+static  char scrambled_ID[NB_TYPES][8]		= {"DVR-103", "DVR-104", "DVR-105", "DVR-106", "DVR-107", "DVR-K12"};
+static  u32  unscrambled_ID_pos[NB_TYPES]	= {0x003800, 0x010100, 0x010000, 0x010000, 0x010000, 0x010000};
 static  char unscrambled_ID[NB_TYPES][17]	= {"PIONEER DVR-S301", "PIONEER DVD-R104", "PIONEER  DVR-105", 
-											   "PIONEER  DVR-106", "PIONEER  DVR-107"};
-static  u32  header_length[NB_TYPES]		= {0x140, 0x160, 0x160, 0x160, 0x160};
-static  u32  checksum_pos[NB_TYPES]			= {0x003900, 0x010200, 0x010010, 0x0D2000, 0x0D2000};
+											   "PIONEER  DVR-106", "PIONEER  DVR-107", "PIONEER  DVR-K12"};
+static  u32  header_length[NB_TYPES]		= {0x140, 0x160, 0x160, 0x160, 0x160, 0x160};
+static  u32  checksum_pos[NB_TYPES]			= {0x003900, 0x010200, 0x010010, 0x0D2000, 0x0D2000, 0xD2000};
 static  u32  checksum_pos_kernel			= 0xB000;
 static  u32  checksum_blocks[NB_TYPES][6]	= { {0x003902, 0x008000, 0x010000, 0x040000, 0x080000, 0x0F8000},
                                                 {0x010202, 0x012000, 0x020000, 0x050000, 0x080000, 0x0F8000},
 												{0x010012, 0x08C000, 0x090000, 0x091000, 0x000000, 0x000000},
+												{0x010000, 0x0CBFFC, 0x0D0000, 0x0D1000, 0x000000, 0x000000},
 												{0x010000, 0x0CBFFC, 0x0D0000, 0x0D1000, 0x000000, 0x000000},
 												{0x010000, 0x0CBFFC, 0x0D0000, 0x0D1000, 0x000000, 0x000000} };
 static	u32  checksum_blocks_kernel[6]		= {0x00C000, 0x010000, 0x000000, 0x000000, 0x000000, 0x000000};
@@ -110,7 +114,7 @@ checksum (u8* buffer, int type)
 	return 0;
 }
 
-// 106, 107 checksum (general & kernel)
+// 106, 107, K12 checksum (general & kernel)
 int 
 checksum2 (u8* buffer, int type)
 {
@@ -139,7 +143,7 @@ checksum2 (u8* buffer, int type)
 }
 
 
-// 106, 107 extra checksum (general)
+// 106, 107, K12 extra checksum (general)
 int 
 checksum3 (u8* buffer, int type)
 {
@@ -341,14 +345,14 @@ main (int argc, char *argv[])
 	if ((optind == argc) || opt_error)
 	{
 		puts ("");
-		puts ("scramble v3.7 - Pioneer DVR firwmare scrambler/unscrambler");
+		puts ("scramble v3.8 - Pioneer DVR firwmare scrambler/unscrambler");
 		puts ("usage: scramble [-v] [-u] [-s] [-k key] [-c check] [-t type] source [dest]");
 		puts ("Most features are autodetected, but if you want to force options:");
 		puts ("                -u : force unscrambling");
 		puts ("                -s : force scrambling");
 		puts ("                -k : force use of unscrambling key from file 'key'");
 		puts ("                -c : force the use of checksum values from 'check'");
-		puts ("                -t : force drive type (0=DVR-103 -> 4=DVR-107)");
+		puts ("                -t : force drive type (0=DVR-103 -> 5=DVR-K12)");
 		puts ("                -v : verbose");
 		puts ("");
 		exit (1);
@@ -379,8 +383,24 @@ main (int argc, char *argv[])
 			opt_unscramble = (opt_force)?opt_unscramble:-1;
 			destname[0] = 'U';
 			break;
+		case 'v':
+			opt_unscramble = (opt_force)?opt_unscramble:0;
+			destname[0] = 's';
+			break;
+		case 'V':
+			opt_unscramble = (opt_force)?opt_unscramble:0;
+			destname[0] = 'S';
+			break;
+		case 's':
+			opt_unscramble = (opt_force)?opt_unscramble:-1;
+			destname[0] = 'v';
+			break;
+		case 'S':
+			opt_unscramble = (opt_force)?opt_unscramble:-1;
+			destname[0] = 'V';
+			break;
 		default:
-			printf ("Firmware name does not begin by letter 'R' or 'U'\n");
+			printf ("Firmware name does not begin by letter 'R', 'S', 'U' or 'V'\n");
 			printf ("You have to force scrambling or unscrambling as option cannot be guessed.\n");
 			break;
 	} 
@@ -508,10 +528,10 @@ main (int argc, char *argv[])
 	switch (scramblerType[firmware_type])
 	{
 
-	case 1:	// Scrambler type 1 (106, 107)
+	case 1:	// Scrambler type 1 (106, 107, K12)
 		if (opt_unscramble)
 		{	// Unscramble
-		Scrambler1* t1 = &(type1[is_general][firmware_type - NB_TYPES_0]);
+		Scrambler1* t1 = &(type1[firmware_type - NB_TYPES_0][is_general]);
 			for (i = 0; i<t1->scrambled_size; i+=4)
 			{
 				if ((i != 0x8000) && (i != 0x70000))
@@ -522,7 +542,7 @@ main (int argc, char *argv[])
 		}
 		else
 		{	// Scramble
-		Scrambler1* t1 = &(type1[is_general][firmware_type - NB_TYPES_0]);
+		Scrambler1* t1 = &(type1[firmware_type - NB_TYPES_0][is_general]);
 
 			if (!is_general)
 			{	// This is a bit ugly but it'll do for now. We just hijack the general 
@@ -539,10 +559,10 @@ main (int argc, char *argv[])
 			// Extra checksum for the 106, 107
 			if (is_general)
 				checksum3(buffer, firmware_type);
-		
+	
 			for (i = 0; i<t1->scrambled_size; i+=4)
 			{
-				rotate(buffer+t1->scrambled_start+i, 0-buffer[t1->key_address+i%(t1->scrambled_size>>4)]&0x1F, 4);
+				rotate(buffer+t1->scrambled_start+i, 0-(buffer[t1->key_address+i%(t1->scrambled_size>>4)]&0x1F), 4);
 				if ((i != 0x8000) && (i != 0x70000))
 					*(u32*)(buffer+t1->scrambled_start+i) ^= *(u32*)(buffer+t1->key_address + i%(t1->scrambled_size>>4));
 			}
