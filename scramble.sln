@@ -1,5 +1,5 @@
 Microsoft Visual Studio Solution File, Format Version 7.00
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scramble", "scramble.vcproj", "{1550AAFC-D956-4E7E-9B94-81DC1EC0B0FB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scramble", "scramble.vcproj", "{3650FF69-CF41-479E-BFF2-C9D078EF5B90}"
 EndProject
 Global
 	GlobalSection(SolutionConfiguration) = preSolution
@@ -9,10 +9,10 @@ Global
 	GlobalSection(ProjectDependencies) = postSolution
 	EndGlobalSection
 	GlobalSection(ProjectConfiguration) = postSolution
-		{1550AAFC-D956-4E7E-9B94-81DC1EC0B0FB}.Debug.ActiveCfg = Debug|Win32
-		{1550AAFC-D956-4E7E-9B94-81DC1EC0B0FB}.Debug.Build.0 = Debug|Win32
-		{1550AAFC-D956-4E7E-9B94-81DC1EC0B0FB}.Release.ActiveCfg = Release|Win32
-		{1550AAFC-D956-4E7E-9B94-81DC1EC0B0FB}.Release.Build.0 = Release|Win32
+		{3650FF69-CF41-479E-BFF2-C9D078EF5B90}.Debug.ActiveCfg = Debug|Win32
+		{3650FF69-CF41-479E-BFF2-C9D078EF5B90}.Debug.Build.0 = Debug|Win32
+		{3650FF69-CF41-479E-BFF2-C9D078EF5B90}.Release.ActiveCfg = Release|Win32
+		{3650FF69-CF41-479E-BFF2-C9D078EF5B90}.Release.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 	EndGlobalSection

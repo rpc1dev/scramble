@@ -1,5 +1,5 @@
 /* getopt.c
-Copyright (C) 1989,	1990, 1991,	1992, 1993 Free	Software Foundation, Inc.
+Copyright (C) 1989, 1990, 1991,	1992, 1993 Free	Software Foundation, Inc.
 
 This program is	free software; you can redistribute	it and/or modify it
 under the terms	of the GNU General Public License as published by the
@@ -15,7 +15,7 @@ You	should have	received a copy	of the GNU General Public License
 along with this	program; if	not, write to the Free Software
 Foundation,	675	Mass Ave, Cambridge, MA	02139, USA.	 */
 
-#include "stdafx.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "getopt.h"
@@ -104,7 +104,7 @@ whose names	are	inconsistent.  */
 #if	__STDC__ ||	defined(PROTO)
 extern char	*getenv(const char *name);
 extern int	strcmp (const char *s1,	const char *s2);
-extern int	strncmp(const char *s1,	const char *s2,	int	n);
+extern int	strncmp(const char *s1,	const char *s2,	size_t	n);
 
 static int my_strlen(const char	*s);
 static char	*my_index (const char *str,	int	chr);
@@ -113,7 +113,7 @@ extern char	*getenv	();
 #endif
 
 static int
-my_strlen (char	*str)
+my_strlen (const char	*str)
 {
 	int	n =	0;
 	while (*str++)

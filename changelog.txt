@@ -1,0 +1,22 @@
+Scramble - Changelog
+
+v3.2 - Full UNIX (gcc) / Windows (Visual Studio .NET) compatibilty
+       Removed obscure options and inadequate naming conventions
+       Auto detection od scrambling/unscrambling according to filename
+       Apple Key included for the DVR-104
+
+v3.1 - UNIX/Windows
+       Header is preserved
+
+v3.0 - Windows only
+       Added support for DVR-104
+
+v2.0 - Windows port (Visual Studio)
+       modified getopt() to have it compile with VC++
+
+v1.1 - Linux/UNIX only       
+       Little/Big Endian detection
+       
+v1.0 - First release!
+       Linux x86 only
+       DVR-103 only

@@ -1,6 +1,6 @@
 /*
 * scramble : scrambler/unscrambler for Pioneer DVR firmwares
-* version 3.01
+* version 3.2
 *
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -13,7 +13,6 @@
 * GNU General Public License for more details.
 */
 
-#include "stdafx.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,22 +30,21 @@
 #define u32 unsigned long
 #endif
 
-#define	FIRMWARE_SIZE			0x100000	// firmware	size
-#define	KEY_SIZE				0x000100	// key size
-#define	KEY_ADDRESS				0x008000	// key position
-#define	DEFAULT_SCRAMBLE_NAME	"scrambled.bin"
-#define	DEFAULT_UNSCRAMBLE_NAME	"unscrambled.bin"
+#define	FIRMWARE_SIZE	0x100000	// firmware size
+#define	KEY_SIZE		0x000100	// key size
+#define	KEY_ADDRESS		0x008000	// key position
 #define SCRAMBLED_ID_POS        0x70
-#define NB_TYPES				2			// Number of drive models currently known
+#define NB_TYPES		2		// Number of drive models currently known
 
 // Defaults for the DVR-103 and DVR-104
 static  char def_keyname[NB_TYPES][16]		= {"key103.bin", "key104.bin"};
 static  char scrambled_ID[NB_TYPES][8]		= {"DVR-103", "DVR-104"};
 static  u32  unscrambled_ID_pos[NB_TYPES]	= {0x003800, 0x010100};
 static  char unscrambled_ID[NB_TYPES][17]	= {"PIONEER DVR-S301", "PIONEER DVD-R104"};
+static  u32  header_length[NB_TYPES]		= {0x140, 0x160};
 static  u32  checksum_pos[NB_TYPES]			= {0x003900, 0x010200};
-static  u32  checksum_blocks[NB_TYPES][6]	= {0x003902, 0x008000, 0x010000, 0x040000, 0x080000, 0x0F8000,
-											   0x010202, 0x012000, 0x020000, 0x050000, 0x080000, 0x0F8000};
+static  u32  checksum_blocks[NB_TYPES][6]	= { {0x003902, 0x008000, 0x010000, 0x040000, 0x080000, 0x0F8000},
+                                                {0x010202, 0x012000, 0x020000, 0x050000, 0x080000, 0x0F8000} };
 int opt_verbose = 0;
 
 int 
@@ -159,41 +157,42 @@ unscramble (u8* buffer, u8* key)
 int
 main (int argc, char *argv[])
 {
-	char keyname[255];
-	char destname[255] = DEFAULT_SCRAMBLE_NAME;
+	unsigned char *saved_header = NULL;
+	char keyname[16];
+	char sourcename[16];
+	char destname[16];
 	u8  *buffer, *key;
-	u8  is_big_endian  = 0;
-	int firmware_type = -1;
-	int opt_error = 0;
-	int opt_unscramble = 0;
-	int opt_keyname = 0;
-	int opt_firmware_key = 0;
-	int opt_save_key = 0;
+	u8  is_big_endian  	= 0;
+	int firmware_type 	= -1;	// Undefined by default
+	int opt_error 		= 0;
+	int opt_unscramble 	= -1;	// Unscramble by default
+	int opt_force       = 0;
+	int opt_keyname 	= 0;
 	int i;
 	FILE *fd = NULL;
 
 	setbuf (stdin, NULL);
 
-	while ((i = getopt (argc, argv, "usfvk:t:")) != -1)
+	while ((i = getopt (argc, argv, "usvk:t:")) != -1)
 		switch (i)
 	{
-		case 'v':		// Print verbose messages
+		case 'v':	// Print verbose messages
 			opt_verbose = -1;
 			break;
-		case 'u':       // Unscramble firmware
+		case 'u':       // Force unscrambling
 			opt_unscramble = -1;
+			opt_force = -1;
 			break;
-		case 's':       // Save key from file
-			opt_save_key = -1;
+		case 's':       // Force scrambling
+			opt_unscramble = 0;
+			opt_force = -1;
 			break;
 		case 'k':       // Key file to use
-			strcpy (keyname, optarg);
+			strncpy (keyname, optarg, 15);
+			keyname[15] = 0;
 			opt_keyname = -1;
 			break;
-		case 'f':		// Pick up the key from the firmware 
-			opt_firmware_key = -1;
-			break;
-		case 't':		// force firmware type
+		case 't':	// force firmware type
 			firmware_type = atoi(optarg);
 			if (firmware_type < 0 || firmware_type >= NB_TYPES)
 			{
@@ -201,7 +200,7 @@ main (int argc, char *argv[])
 				exit(1);
 			}
 			break;
-		case '?':		// Unknown option
+		case '?':	// Unknown option
 			opt_error++;
 			break;
 		default:
@@ -212,31 +211,68 @@ main (int argc, char *argv[])
 	{
 		puts ("");
 		puts ("scramble - Pioneer DVR firwmare scrambler/unscrambler");
-		puts ("usage: scramble [-v] [-u] [-s] [-f] [-k key] [-t type] source [dest]");
+		puts ("usage: scramble [-v] [-u] [-s] [-k keyfile] [-t type] source [dest]");
+		puts ("Most features are autodetected, but if you want to force options:");
+		puts ("                -u : force unscrambling");
+		puts ("                -s : force scrambling");
+		puts ("                -k : force use of unscrambling key from file 'keyfile'");
+		puts ("                -t : force drive type (0 = DVR-103, 1 = DVR-104)");
+		puts ("                -v : verbose");
 		puts ("");
 		exit (1);
 	}
 
-	if ((fd = fopen (argv[optind], "rb")) == NULL)
+        // Copy firmware name
+	strncpy (sourcename, argv[optind], 15);
+	sourcename[15] = 0;
+	
+	// By default, we'll use sourcename as destination
+	// and toggle first letter between R/U for scrambled/unscrambled
+	strcpy (destname, sourcename);
+	switch (sourcename[0])
+	{
+		case 'u':
+			opt_unscramble = (opt_force)?opt_unscramble:0;
+			destname[0] = 'r';
+			break;
+		case 'U':
+			opt_unscramble = (opt_force)?opt_unscramble:0;
+			destname[0] = 'R';
+			break;
+		case 'r':
+			opt_unscramble = (opt_force)?opt_unscramble:-1;
+			destname[0] = 'u';
+			break;
+		case 'R':
+			opt_unscramble = (opt_force)?opt_unscramble:-1;
+			destname[0] = 'U';
+			break;
+		default:
+			printf ("Firmware name does not begin by letter 'R' or 'U'\n");
+			printf ("You have to force scrambling or unscrambling as option cannot be guessed.\n");
+			break;
+	} 
+
+	if ( (optind+1) < argc)
+	{	// There is a destination name. Let's use it
+		strncpy (destname, argv[optind+1], 15);
+		destname[15] = 0;
+	}
+
+	if ((fd = fopen (sourcename, "rb")) == NULL)
 	{
 		if (opt_verbose)
 			perror ("fopen()");
-		fprintf (stderr, "Can't open source file %s\n", argv[optind]);
+		fprintf (stderr, "Can't open source file %s\n", sourcename);
 		exit (1);
 	}
 
-	optind++;
-	if (optind < argc)
-		strcpy (destname, argv[optind++]);
-	else if (opt_unscramble)
-		strcpy (destname, DEFAULT_UNSCRAMBLE_NAME);
-
+  
 	if (opt_verbose)
 		printf("Allocating buffers...\n");
 	if ( (buffer = (u8*) malloc(FIRMWARE_SIZE)) == NULL)
 	{
-		printf
-			("Could not allocate firmware buffer\n");
+		printf ("Could not allocate firmware buffer\n");
 		fclose (fd);
 		exit (1);
 	}
@@ -248,6 +284,7 @@ main (int argc, char *argv[])
 		fclose (fd);
 		exit (1);
 	}
+
 
 	// Check endianness
 	buffer[0] = 0x00;
@@ -308,51 +345,51 @@ main (int argc, char *argv[])
 		}
 	}
 
+        if (header_length[firmware_type])
+	{
+		if ( (saved_header = malloc(header_length[firmware_type])) == NULL)
+		{
+			printf("Could not allocate header buffer\n");
+			fclose (fd);
+			exit (1);
+		}
+	}
+
 	if (!opt_keyname)
 		// If the keyname has not been defined yet, define it from the firmware type
 		strcpy (keyname, def_keyname[firmware_type]);
 
-	// Copy key
-	if (opt_firmware_key)
-	{ // If no key was provided, attempt to read it from buffer
-		printf("Trying to use key at firmware address 0x%06X\n",KEY_ADDRESS); 
-		memcpy(key, buffer+KEY_ADDRESS, KEY_SIZE);
-		if (opt_save_key)
-		{
-			printf("writing key found at firmware address 0x%06X to key file %s\n",KEY_ADDRESS);
-			fd = fopen (&keyname[firmware_type], "wb");
-			fwrite (key, 1, KEY_SIZE, fd);
-			fclose(fd);
-		}
-	}
-	else
+	if (opt_verbose)
+		printf("Using key from file %s\n", keyname);
+	if ((fd = fopen (keyname, "rb")) == NULL)
 	{
 		if (opt_verbose)
-			printf("Using key from file %s\n", keyname);
-		if ((fd = fopen (keyname, "rb")) == NULL)
-		{
-			if (opt_verbose)
-				perror ("fopen()");
+			perror ("fopen()");
 			fprintf (stderr, "Can't open key file %s\n", keyname);
 			free (buffer); 
 			free (key);
 			exit (1);
-		}
-		if (fread (key, 1, KEY_SIZE, fd) != KEY_SIZE)
-		{
-			fprintf (stderr, "%s is too small to be a key file!", keyname);
-			free (buffer);
-			free (key);
-			fclose (fd);
-			exit (1);
-		}
-		fclose (fd);
 	}
+	if (fread (key, 1, KEY_SIZE, fd) != KEY_SIZE)
+	{
+		fprintf (stderr, "%s is too small to be a key file!", keyname);
+		free (buffer);
+		free (key);
+		fclose (fd);
+		exit (1);
+	}
+	fclose (fd);
 
 	if (!opt_unscramble)
 	{
 		printf("Computing checksum...\n");
 		checksum(buffer, is_big_endian, firmware_type);
+	}
+
+	// Save the unmodified header
+    	if (saved_header)
+	{
+		memcpy(saved_header, buffer, header_length[firmware_type]);
 	}
 
 	printf ("%scrambling firmware to file '%s'...\n",(opt_unscramble)?"Uns":"S", destname);
@@ -361,6 +398,14 @@ main (int argc, char *argv[])
 			unscramble (buffer+i*KEY_SIZE, key);
 		else
 			scramble (buffer+i*KEY_SIZE, key);
+	
+	// Copy back the unmodified header
+	if (saved_header)
+	{
+		memcpy(buffer, saved_header, header_length[firmware_type]);
+		free(saved_header);
+	}
+
 	if (opt_verbose)
 		printf ("Writing firmware...\n");
 
