@@ -1,5 +1,7 @@
 Scramble - Changelog
 
+v3.3 - Unscrambling of DVR-105 firmware (no rescrambling yet)
+
 v3.2 - Full UNIX (gcc) / Windows (Visual Studio .NET) compatibilty
        Removed obscure options and inadequate naming conventions
        Auto detection od scrambling/unscrambling according to filename

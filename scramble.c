@@ -30,21 +30,22 @@
 #define u32 unsigned long
 #endif
 
-#define	FIRMWARE_SIZE	0x100000	// firmware size
-#define	KEY_SIZE		0x000100	// key size
-#define	KEY_ADDRESS		0x008000	// key position
+#define	FIRMWARE_SIZE			0x100000	// firmware size
+#define	KEY_SIZE				0x000100	// key size
+#define	KEY_ADDRESS				0x008000	// key position
 #define SCRAMBLED_ID_POS        0x70
-#define NB_TYPES		2		// Number of drive models currently known
+#define NB_TYPES				3			// Number of drive models currently known
 
 // Defaults for the DVR-103 and DVR-104
-static  char def_keyname[NB_TYPES][16]		= {"key103.bin", "key104.bin"};
-static  char scrambled_ID[NB_TYPES][8]		= {"DVR-103", "DVR-104"};
-static  u32  unscrambled_ID_pos[NB_TYPES]	= {0x003800, 0x010100};
-static  char unscrambled_ID[NB_TYPES][17]	= {"PIONEER DVR-S301", "PIONEER DVD-R104"};
-static  u32  header_length[NB_TYPES]		= {0x140, 0x160};
-static  u32  checksum_pos[NB_TYPES]			= {0x003900, 0x010200};
+static  char def_keyname[NB_TYPES][16]		= {"key103.bin", "key104.bin", "key105.bin"};
+static  char scrambled_ID[NB_TYPES][8]		= {"DVR-103", "DVR-104", "DVR-105"};
+static  u32  unscrambled_ID_pos[NB_TYPES]	= {0x003800, 0x010100, 0x010000};
+static  char unscrambled_ID[NB_TYPES][17]	= {"PIONEER DVR-S301", "PIONEER DVD-R104", "PIONEER  DVR-105"};
+static  u32  header_length[NB_TYPES]		= {0x140, 0x160, 0x160};
+static  u32  checksum_pos[NB_TYPES]			= {0x003900, 0x010200, 0x000000};
 static  u32  checksum_blocks[NB_TYPES][6]	= { {0x003902, 0x008000, 0x010000, 0x040000, 0x080000, 0x0F8000},
-                                                {0x010202, 0x012000, 0x020000, 0x050000, 0x080000, 0x0F8000} };
+                                                {0x010202, 0x012000, 0x020000, 0x050000, 0x080000, 0x0F8000},
+												{0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000} };
 int opt_verbose = 0;
 
 int 
@@ -216,7 +217,7 @@ main (int argc, char *argv[])
 		puts ("                -u : force unscrambling");
 		puts ("                -s : force scrambling");
 		puts ("                -k : force use of unscrambling key from file 'keyfile'");
-		puts ("                -t : force drive type (0 = DVR-103, 1 = DVR-104)");
+		puts ("                -t : force drive type (0 = DVR-103, 1 = DVR-104, 2 = DVR-105)");
 		puts ("                -v : verbose");
 		puts ("");
 		exit (1);
