@@ -1,5 +1,7 @@
 Scramble - Changelog
 
+v3.7  - DVR-107 support
+
 v3.6b - DVR-106 *FULL* integration, with extra checksuming on general
 
 v3.6  - DVR-106 proper integration, for both kernel and general with checksum
