@@ -1,6 +1,6 @@
 /*
 * scramble : scrambler/unscrambler for Pioneer DVR firmwares
-* version 3.2
+* version 3.4
 *
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -42,10 +42,10 @@ static  char scrambled_ID[NB_TYPES][8]		= {"DVR-103", "DVR-104", "DVR-105"};
 static  u32  unscrambled_ID_pos[NB_TYPES]	= {0x003800, 0x010100, 0x010000};
 static  char unscrambled_ID[NB_TYPES][17]	= {"PIONEER DVR-S301", "PIONEER DVD-R104", "PIONEER  DVR-105"};
 static  u32  header_length[NB_TYPES]		= {0x140, 0x160, 0x160};
-static  u32  checksum_pos[NB_TYPES]			= {0x003900, 0x010200, 0x000000};
+static  u32  checksum_pos[NB_TYPES]			= {0x003900, 0x010200, 0x010010};
 static  u32  checksum_blocks[NB_TYPES][6]	= { {0x003902, 0x008000, 0x010000, 0x040000, 0x080000, 0x0F8000},
                                                 {0x010202, 0x012000, 0x020000, 0x050000, 0x080000, 0x0F8000},
-												{0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000} };
+												{0x010012, 0x08C000, 0x090000, 0x091000, 0x000000, 0x000000} };
 int opt_verbose = 0;
 
 int 
@@ -160,6 +160,7 @@ main (int argc, char *argv[])
 {
 	unsigned char *saved_header = NULL;
 	char keyname[16];
+	char checkname[16];
 	char sourcename[16];
 	char destname[16];
 	u8  *buffer, *key;
@@ -169,12 +170,13 @@ main (int argc, char *argv[])
 	int opt_unscramble 	= -1;	// Unscramble by default
 	int opt_force       = 0;
 	int opt_keyname 	= 0;
+	int opt_check		= 0;
 	int i;
 	FILE *fd = NULL;
 
 	setbuf (stdin, NULL);
 
-	while ((i = getopt (argc, argv, "usvk:t:")) != -1)
+	while ((i = getopt (argc, argv, "usvc:k:t:")) != -1)
 		switch (i)
 	{
 		case 'v':	// Print verbose messages
@@ -192,6 +194,11 @@ main (int argc, char *argv[])
 			strncpy (keyname, optarg, 15);
 			keyname[15] = 0;
 			opt_keyname = -1;
+			break;
+		case 'c':       // Check file to use
+			strncpy (checkname, optarg, 15);
+			checkname[15] = 0;
+			opt_check = -1;
 			break;
 		case 't':	// force firmware type
 			firmware_type = atoi(optarg);
@@ -211,12 +218,13 @@ main (int argc, char *argv[])
 	if ((optind == argc) || opt_error)
 	{
 		puts ("");
-		puts ("scramble - Pioneer DVR firwmare scrambler/unscrambler");
-		puts ("usage: scramble [-v] [-u] [-s] [-k keyfile] [-t type] source [dest]");
+		puts ("scramble v3.4 - Pioneer DVR firwmare scrambler/unscrambler");
+		puts ("usage: scramble [-v] [-u] [-s] [-k key] [-c check] [-t type] source [dest]");
 		puts ("Most features are autodetected, but if you want to force options:");
 		puts ("                -u : force unscrambling");
 		puts ("                -s : force scrambling");
-		puts ("                -k : force use of unscrambling key from file 'keyfile'");
+		puts ("                -k : force use of unscrambling key from file 'key'");
+		puts ("                -c : force the use of checksum values from 'check'");
 		puts ("                -t : force drive type (0 = DVR-103, 1 = DVR-104, 2 = DVR-105)");
 		puts ("                -v : verbose");
 		puts ("");
@@ -380,6 +388,37 @@ main (int argc, char *argv[])
 		exit (1);
 	}
 	fclose (fd);
+
+	if (opt_check)
+	{	// Get checksum addresses from file
+		if (opt_verbose)
+			printf("Reading checksum addresses from file %s\n", checkname);
+		if ((fd = fopen (checkname, "rb")) == NULL)
+		{
+			if (opt_verbose)
+				perror ("fopen()");
+			fprintf (stderr, "Can't open check file %s\n", checkname);
+			free (buffer); 
+			free (key);
+			exit (1);
+		}
+		if (fscanf (fd, "%x", &checksum_pos[firmware_type]) != 1)
+		{
+			fprintf (stderr, "Could not read checksum address from %s\n", checkname);
+			free (buffer); 
+			free (key);
+			exit (1);
+		}
+		for (i=0;i<6;i++)
+			if (fscanf (fd, "%x", &checksum_blocks[firmware_type][i]) !=1 )
+			{
+				fprintf (stderr, "Could not read all block boundaries from %s\n", checkname);
+				free (buffer); 
+				free (key);
+				exit (1);
+			}
+		fclose (fd);
+	}
 
 	if (!opt_unscramble)
 	{

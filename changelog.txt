@@ -1,11 +1,13 @@
 Scramble - Changelog
 
-v3.3 - Unscrambling of DVR-105 firmware (no rescrambling yet)
+v3.4 - DVR-105 FULL support ;)
+       Option -c to specify checksum file 
+
+v3.3 - DVR-105 unscrambling support
 
 v3.2 - Full UNIX (gcc) / Windows (Visual Studio .NET) compatibilty
        Removed obscure options and inadequate naming conventions
        Auto detection od scrambling/unscrambling according to filename
-       Apple Key included for the DVR-104
 
 v3.1 - UNIX/Windows
        Header is preserved
