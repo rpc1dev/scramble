@@ -1,6 +1,6 @@
 /*
 * scramble : scrambler/unscrambler for Pioneer DVR firmwares
-* version 3.8
+* version 3.9
 *
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -32,9 +32,8 @@
 
 #define	FIRMWARE_SIZE			0x100000	// GENERAL firmware size
 #define	KEY_SIZE				0x000100	// GENERAL key size
-#define	KEY_ADDRESS				0x008000	// GENERAL key position
 #define SCRAMBLED_ID_POS        0x70
-#define NB_TYPES				6			// Number of drive models currently known
+#define NB_TYPES				7			// Number of drive models currently known
 #define NB_TYPES_0              3
 #define NB_TYPES_1              (NB_TYPES-NB_TYPES_0)
 
@@ -45,26 +44,33 @@ typedef struct {
 	u32		key_address;
 } Scrambler1;
 
+
 // Defaults parameters
 
-static  char scramblerType[NB_TYPES]        = {0,0,0,1,1,1};
+static  char scramblerType[NB_TYPES]        = {0,0,0,1,1,1,1};
 static  Scrambler1 type1[NB_TYPES_1][2]     = { {{0x00B000, 0x005000, 0x009000},	// KERNEL
+												 {0x010000, 0x0C3000, 0x0E0000}},   // GENERAL
+												{{0x00B000, 0x005000, 0x009000},	// KERNEL
 												 {0x010000, 0x0C3000, 0x0E0000}},   // GENERAL
 												{{0x00B000, 0x005000, 0x009000},	// KERNEL
 												 {0x010000, 0x0C3000, 0x0E0000}},   // GENERAL
 												{{0x00B000, 0x005000, 0x009000},	// KERNEL
 												 {0x010000, 0x0C3000, 0x0E0000}} }; // GENERAL
 static  char def_keyname[NB_TYPES_0][16]	= {"key103.bin", "key104.bin", "key105.bin"};
-static  char scrambled_ID[NB_TYPES][8]		= {"DVR-103", "DVR-104", "DVR-105", "DVR-106", "DVR-107", "DVR-K12"};
-static  u32  unscrambled_ID_pos[NB_TYPES]	= {0x003800, 0x010100, 0x010000, 0x010000, 0x010000, 0x010000};
+static  char scrambled_ID[NB_TYPES][8]		= {"DVR-103", "DVR-104", "DVR-105", "DVR-106", 
+											   "DVR-107", "DVR-K12", "DVR-108"};
+static  u32  unscrambled_ID_pos[NB_TYPES]	= {0x003800, 0x010100, 0x010000, 0x010000, 
+											   0x010000, 0x010000, 0x010000};
 static  char unscrambled_ID[NB_TYPES][17]	= {"PIONEER DVR-S301", "PIONEER DVD-R104", "PIONEER  DVR-105", 
-											   "PIONEER  DVR-106", "PIONEER  DVR-107", "PIONEER  DVR-K12"};
-static  u32  header_length[NB_TYPES]		= {0x140, 0x160, 0x160, 0x160, 0x160, 0x160};
-static  u32  checksum_pos[NB_TYPES]			= {0x003900, 0x010200, 0x010010, 0x0D2000, 0x0D2000, 0xD2000};
+						   "PIONEER  DVR-106", "PIONEER  DVR-107", "PIONEER  DVR-K12",
+											   "PIONEER  DVR-108"};
+static  u32  header_length[NB_TYPES]		= {0x140, 0x160, 0x160, 0x160, 0x160, 0x160, 0x160};
+static  u32  checksum_pos[NB_TYPES]			= {0x003900, 0x010200, 0x010010, 0x0D2000, 0x0D2000, 0xD2000, 0xD2000};
 static  u32  checksum_pos_kernel			= 0xB000;
 static  u32  checksum_blocks[NB_TYPES][6]	= { {0x003902, 0x008000, 0x010000, 0x040000, 0x080000, 0x0F8000},
                                                 {0x010202, 0x012000, 0x020000, 0x050000, 0x080000, 0x0F8000},
 												{0x010012, 0x08C000, 0x090000, 0x091000, 0x000000, 0x000000},
+												{0x010000, 0x0CBFFC, 0x0D0000, 0x0D1000, 0x000000, 0x000000},
 												{0x010000, 0x0CBFFC, 0x0D0000, 0x0D1000, 0x000000, 0x000000},
 												{0x010000, 0x0CBFFC, 0x0D0000, 0x0D1000, 0x000000, 0x000000},
 												{0x010000, 0x0CBFFC, 0x0D0000, 0x0D1000, 0x000000, 0x000000} };
@@ -131,8 +137,8 @@ checksum2 (u8* buffer, int type)
 	}
 	chk = 0-chk;
 
-	printf("  Computed checksum = 0x%04X\n",chk);
-	printf("  Firmware checksum = 0x%04X\n",fchk);
+	printf("  Computed checksum = 0x%04lX\n",(unsigned long) chk);
+	printf("  Firmware checksum = 0x%04lX\n",(unsigned long) fchk);
 	if (fchk != chk)
 	{
 		printf("  Computed and firmware checksum differ: updating firmware\n");
@@ -151,7 +157,10 @@ checksum3 (u8* buffer, int type)
 	u32 pbuf = 0xE0000;
 	u32 ptr;
 
+
 	printf("  Applying general extra checksum\n");
+
+
 
 
 	for (ptr = 0x10000; ptr < 0xD3000; ptr+=4) {
@@ -161,9 +170,11 @@ checksum3 (u8* buffer, int type)
 			pbuf += 4;
 		}
 	}
+
 	
-	printf ("  Computed second checksum: 0x%04X\n", sum);
-	printf ("  Frimware second checksum: 0x%04X\n", readlong(buffer, pbuf));
+
+	printf ("  Computed second checksum: 0x%04lX\n", (unsigned long) sum);
+	printf ("  Frimware second checksum: 0x%04lX\n", (unsigned long) readlong(buffer, pbuf));
 
 	writelong(buffer, pbuf, sum);
 	pbuf += 4;
@@ -175,8 +186,11 @@ checksum3 (u8* buffer, int type)
 }
 
 // Rotate left or right in little endian mode
+
 int
+
 rotate(u8* buffer, char rotation, int size)
+
 {
 	u8	temp;
 	int i,j;
@@ -212,6 +226,7 @@ rotate(u8* buffer, char rotation, int size)
 				buffer[i] = buffer[i-1];
 			buffer[0] = temp;
 		}
+
 		if (rol)
 		{
 			temp = buffer[size-1]; 
@@ -339,20 +354,20 @@ main (int argc, char *argv[])
 			opt_error++;
 			break;
 		default:
-			printf ("?? getopt returned character code 0%o ??\n", i);
+			printf ("?? getopt returned character code 0%lo ??\n", (unsigned long) i);
 	}
 
 	if ((optind == argc) || opt_error)
 	{
 		puts ("");
-		puts ("scramble v3.8 - Pioneer DVR firwmare scrambler/unscrambler");
+		puts ("scramble v3.9 - Pioneer DVR firwmare scrambler/unscrambler");
 		puts ("usage: scramble [-v] [-u] [-s] [-k key] [-c check] [-t type] source [dest]");
 		puts ("Most features are autodetected, but if you want to force options:");
 		puts ("                -u : force unscrambling");
 		puts ("                -s : force scrambling");
 		puts ("                -k : force use of unscrambling key from file 'key'");
 		puts ("                -c : force the use of checksum values from 'check'");
-		puts ("                -t : force drive type (0=DVR-103 -> 5=DVR-K12)");
+		puts ("                -t : force drive type (0=DVR-103 -> 6=DVR-108 [5=DVR-K12])");
 		puts ("                -v : verbose");
 		puts ("");
 		exit (1);
@@ -496,6 +511,8 @@ main (int argc, char *argv[])
 
 	if (opt_check)
 	{	// Get checksum addresses from file
+	unsigned long tmp;
+	
 		if (opt_verbose)
 			printf("Reading checksum addresses from file %s\n", checkname);
 		if ((fd = fopen (checkname, "rb")) == NULL)
@@ -507,21 +524,23 @@ main (int argc, char *argv[])
 			free (key);
 			exit (1);
 		}
-		if (fscanf (fd, "%x", &checksum_pos[firmware_type]) != 1)
+		if (fscanf (fd, "%lx", &tmp) != 1)
 		{
 			fprintf (stderr, "Could not read checksum address from %s\n", checkname);
 			free (buffer); 
 			free (key);
 			exit (1);
 		}
+		checksum_pos[firmware_type] = tmp;
 		for (i=0;i<6;i++)
-			if (fscanf (fd, "%x", &checksum_blocks[firmware_type][i]) !=1 )
+			if (fscanf (fd, "%lx", &tmp) !=1 )
 			{
 				fprintf (stderr, "Could not read all block boundaries from %s\n", checkname);
 				free (buffer); 
 				free (key);
 				exit (1);
 			}
+		checksum_blocks[firmware_type][i] = tmp;
 		fclose (fd);
 	}
 
@@ -538,6 +557,7 @@ main (int argc, char *argv[])
 				// Pioneer exception (thx to TheKeyMaker for this one)
 					*(u32*)(buffer+t1->scrambled_start+i) ^= *(u32*)(buffer+t1->key_address+i%(t1->scrambled_size>>4));
 				rotate(buffer+t1->scrambled_start+i, buffer[t1->key_address+i%(t1->scrambled_size>>4)]&0x1F, 4);
+
 			}
 		}
 		else
@@ -563,6 +583,7 @@ main (int argc, char *argv[])
 			for (i = 0; i<t1->scrambled_size; i+=4)
 			{
 				rotate(buffer+t1->scrambled_start+i, 0-(buffer[t1->key_address+i%(t1->scrambled_size>>4)]&0x1F), 4);
+
 				if ((i != 0x8000) && (i != 0x70000))
 					*(u32*)(buffer+t1->scrambled_start+i) ^= *(u32*)(buffer+t1->key_address + i%(t1->scrambled_size>>4));
 			}

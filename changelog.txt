@@ -1,6 +1,10 @@
 Scramble - Changelog
 
-v3.8b - DVR-K12D Support
+v3.9  - Fixing the improper detection of the 108 
+
+v3.8a - Minor modifications to avoid gcc -Wall warnings.
+
+v3.8  - DVR-K12D Support
 	Bugfixes
 
 v3.7  - DVR-107 support
@@ -19,7 +23,7 @@ v3.3  - DVR-105 unscrambling support
 
 v3.2  - Full UNIX (gcc) / Windows (Visual Studio .NET) compatibilty
         Removed obscure options and inadequate naming conventions
-        Auto detection od scrambling/unscrambling according to filename
+        Auto detection of scrambling/unscrambling according to filename
 
 v3.1  - UNIX/Windows
         Header is preserved
